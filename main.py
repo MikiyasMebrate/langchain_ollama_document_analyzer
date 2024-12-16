@@ -22,7 +22,7 @@ embeddings = OllamaEmbeddings(
 )
 
 # Load PDF using PyMuPDFLoader
-loader = PyMuPDFLoader("./BBIMS.pdf")
+loader = PyMuPDFLoader("./documents/networking.pdf")
 
 # Initialize text splitter
 text_splitter = RecursiveCharacterTextSplitter(
@@ -30,29 +30,38 @@ text_splitter = RecursiveCharacterTextSplitter(
     chunk_overlap=50,  # Overlap between chunks to maintain context
 )
 
-try:
-    # Use lazy_load() to efficiently process large files
-    raw_docs = list(islice(loader.lazy_load(), 20))  # Load the first 5 pages lazily
+def load_and_split_documents(loader, text_splitter):
+    """
+    Loads and splits documents into chunks using the text splitter.
+    """
+    try:
+        raw_docs = loader.lazy_load()
+        documents = [
+            Document(page_content=chunk, metadata=raw_doc.metadata)
+            for raw_doc in raw_docs
+            for chunk in text_splitter.split_text(raw_doc.page_content)
+        ]
+        return documents
+    except Exception as e:
+        print(f"Error loading or processing documents: {e}")
+        return []
 
-    # Apply text splitting and create LangChain documents
-    documents = []
-    for raw_doc in raw_docs:
-        chunks = text_splitter.split_text(raw_doc.page_content)
-        for chunk in chunks:
-            documents.append(Document(page_content=chunk, metadata=raw_doc.metadata))
-
-except Exception as e:
-    print(f"Error loading or processing documents: {e}")
-    documents = []
+# Load and process documents
+documents = load_and_split_documents(loader, text_splitter)
 
 # Assign unique string IDs to documents
-document_ids = [str(i) for i in range(len(documents))]
+document_ids = [f"doc-{i}" for i in range(len(documents))]
 
 # Initialize Chroma vector store
 vector_store = Chroma(
     collection_name="foo",
     embedding_function=embeddings,
 )
+
+
+# Initialize Chroma vector store with persistence
+persist_directory = "./chroma_db"  # Directory to store the database
+
 
 # Add documents to the vector store
 try:
@@ -109,4 +118,7 @@ async def ask_questions():
 
 # Run the async question loop
 if __name__ == "__main__":
-    asyncio.run(ask_questions())
+    if documents:
+        asyncio.run(ask_questions())
+    else:
+        print("No documents loaded. Exiting.")
