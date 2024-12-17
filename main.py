@@ -22,7 +22,7 @@ embeddings = OllamaEmbeddings(
 )
 
 # Load PDF using PyMuPDFLoader
-loader = PyMuPDFLoader("./documents/networking.pdf")
+loader = PyMuPDFLoader("./documents/ddd.pdf")
 
 # Initialize text splitter
 text_splitter = RecursiveCharacterTextSplitter(
@@ -79,11 +79,16 @@ def format_docs(docs):
 
 # Define a prompt template for the chain
 template = """
-Answer the question based on the context provided, with detailed and specific references only to the context.
+Based on the provided context, perform the following tasks:
+1. **Analyze** the context and provide a brief summary of the main points or insights.
+2. **Describe** the relevant details or facts from the context in a clear and structured manner.
+3. **Answer** the question accurately using evidence and references only from the context.
 
 Context: {context}
 
 Question: {question}
+
+Response:
 """
 
 prompt = PromptTemplate.from_template(template)
